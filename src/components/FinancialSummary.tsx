@@ -10,10 +10,13 @@ interface Financials {
 export default function FinancialSummary({ financials, currencySymbol = '$' }: { financials: Financials, currencySymbol?: string }) {
   const formatCurrency = (num: number | null) => {
     if (num === null || num === undefined) return 'N/A';
-    if (num >= 1e12) return `${currencySymbol}${(num / 1e12).toFixed(2)}T`;
-    if (num >= 1e9) return `${currencySymbol}${(num / 1e9).toFixed(2)}B`;
-    if (num >= 1e6) return `${currencySymbol}${(num / 1e6).toFixed(2)}M`;
-    return `${currencySymbol}${num.toLocaleString()}`;
+    
+    const formatNumber = (val: number) => val.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    if (num >= 1e12) return `${currencySymbol}${formatNumber(num / 1e12)}T`;
+    if (num >= 1e9) return `${currencySymbol}${formatNumber(num / 1e9)}B`;
+    if (num >= 1e6) return `${currencySymbol}${formatNumber(num / 1e6)}M`;
+    return `${currencySymbol}${num.toLocaleString('en-US')}`;
   };
 
   const cards = [

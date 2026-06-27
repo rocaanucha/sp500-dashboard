@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
 const yahooFinance = new YahooFinance();
-import { TOP_SP500_TICKERS, SET50_TICKERS, NIKKEI225_TICKERS } from '@/lib/constants';
+import { TOP_SP500_TICKERS, SET50_TICKERS, NIKKEI225_TICKERS, KOSPI200_TICKERS, CSI300_TICKERS } from '@/lib/constants';
 
 let cachedSP500Quotes: any[] = [];
 let cachedSP500Time: number = 0;
@@ -9,16 +9,24 @@ let cachedSET50Quotes: any[] = [];
 let cachedSET50Time: number = 0;
 let cachedNikkeiQuotes: any[] = [];
 let cachedNikkeiTime: number = 0;
+let cachedKospiQuotes: any[] = [];
+let cachedKospiTime: number = 0;
+let cachedCSI300Quotes: any[] = [];
+let cachedCSI300Time: number = 0;
+let cachedExchangeRates: Record<string, number> = {};
+let cachedExchangeRatesTime: number = 0;
 const CACHE_TTL = 60000; // 1 minute
 
 
 function getMarketInfo(market: string, marketState: string) {
   const isUS = market === 'sp500';
   const isJP = market === 'nikkei225';
-  const tz = isUS ? 'America/New_York' : isJP ? 'Asia/Tokyo' : 'Asia/Bangkok';
-  const openTimeStr = isUS ? '09:30' : isJP ? '09:00' : '10:00';
-  const closeTimeStr = isUS ? '16:00' : isJP ? '15:00' : '16:30';
-  const tzName = isUS ? 'เวลาอเมริกา' : isJP ? 'เวลาญี่ปุ่น' : 'เวลาไทย';
+  const isKR = market === 'kospi200';
+  const isCN = market === 'csi300';
+  const tz = isUS ? 'America/New_York' : isJP ? 'Asia/Tokyo' : isKR ? 'Asia/Seoul' : isCN ? 'Asia/Shanghai' : 'Asia/Bangkok';
+  const openTimeStr = isUS ? '09:30' : isJP ? '09:00' : isKR ? '09:00' : isCN ? '09:30' : '10:00';
+  const closeTimeStr = isUS ? '16:00' : isJP ? '15:00' : isKR ? '15:30' : isCN ? '15:00' : '16:30';
+  const tzName = isUS ? 'เวลาอเมริกา' : isJP ? 'เวลาญี่ปุ่น' : isKR ? 'เวลาเกาหลี' : isCN ? 'เวลาจีน' : 'เวลาไทย';
   
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -31,8 +39,8 @@ function getMarketInfo(market: string, marketState: string) {
   
   const isWeekend = weekday === 'Sat' || weekday === 'Sun';
   const currentTime = hour + minute / 60;
-  const openTimeNum = isUS ? 9.5 : isJP ? 9 : 10;
-  const closeTimeNum = isUS ? 16 : isJP ? 15 : 16.5;
+  const openTimeNum = isUS ? 9.5 : isJP ? 9 : isKR ? 9 : isCN ? 9.5 : 10;
+  const closeTimeNum = isUS ? 16 : isJP ? 15 : isKR ? 15.5 : isCN ? 15 : 16.5;
   
   let isOpen = false;
   if (marketState) {
@@ -66,7 +74,9 @@ export async function GET(request: NextRequest) {
     
     const isSP500 = market === 'sp500';
     const isNikkei = market === 'nikkei225';
-    const allTickers = isSP500 ? TOP_SP500_TICKERS : isNikkei ? NIKKEI225_TICKERS : SET50_TICKERS;
+    const isKospi = market === 'kospi200';
+    const isCSI300 = market === 'csi300';
+    const allTickers = isSP500 ? TOP_SP500_TICKERS : isNikkei ? NIKKEI225_TICKERS : isKospi ? KOSPI200_TICKERS : isCSI300 ? CSI300_TICKERS : SET50_TICKERS;
     const now = Date.now();
     let sortedQuotes: any[] = [];
 
@@ -90,6 +100,26 @@ export async function GET(request: NextRequest) {
         cachedNikkeiTime = now;
       }
       sortedQuotes = cachedNikkeiQuotes;
+    } else if (isKospi) {
+      if (now - cachedKospiTime > CACHE_TTL || cachedKospiQuotes.length === 0) {
+        const quotes = await yahooFinance.quote(allTickers).catch(err => {
+          console.error('Yahoo Finance Quote Error (Kospi):', err);
+          return [];
+        });
+        cachedKospiQuotes = quotes.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+        cachedKospiTime = now;
+      }
+      sortedQuotes = cachedKospiQuotes;
+    } else if (isCSI300) {
+      if (now - cachedCSI300Time > CACHE_TTL || cachedCSI300Quotes.length === 0) {
+        const quotes = await yahooFinance.quote(allTickers).catch(err => {
+          console.error('Yahoo Finance Quote Error (CSI300):', err);
+          return [];
+        });
+        cachedCSI300Quotes = quotes.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+        cachedCSI300Time = now;
+      }
+      sortedQuotes = cachedCSI300Quotes;
     } else {
       if (now - cachedSET50Time > CACHE_TTL || cachedSET50Quotes.length === 0) {
         const quotes = await yahooFinance.quote(allTickers).catch(err => {
@@ -106,6 +136,18 @@ export async function GET(request: NextRequest) {
     const startIdx = (page - 1) * limit;
     const paginatedQuotes = sortedQuotes.slice(startIdx, startIdx + limit);
     
+    // Fetch FX rates (cache for 10 mins)
+    if (now - cachedExchangeRatesTime > CACHE_TTL * 10 || Object.keys(cachedExchangeRates).length === 0) {
+      const fxQuotes = await yahooFinance.quote(['THB=X', 'JPY=X', 'KRW=X', 'CNY=X']).catch(() => []);
+      fxQuotes.forEach(q => {
+        if (q.symbol === 'THB=X') cachedExchangeRates['thb'] = q.regularMarketPrice || 1;
+        if (q.symbol === 'JPY=X') cachedExchangeRates['jpy'] = q.regularMarketPrice || 1;
+        if (q.symbol === 'KRW=X') cachedExchangeRates['krw'] = q.regularMarketPrice || 1;
+        if (q.symbol === 'CNY=X') cachedExchangeRates['cny'] = q.regularMarketPrice || 1;
+      });
+      cachedExchangeRatesTime = now;
+    }
+
     const stocks = paginatedQuotes.map(q => ({
       ticker: q.symbol,
       name: q.shortName || q.longName || q.symbol,
@@ -123,6 +165,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       stocks, 
       marketInfo,
+      exchangeRates: cachedExchangeRates,
       pagination: { currentPage: page, totalPages, totalItems: allTickers.length }
     });
   } catch (error) {

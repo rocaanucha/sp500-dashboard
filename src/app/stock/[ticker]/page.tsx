@@ -68,7 +68,13 @@ export default function StockDetail() {
   }
 
   const isThaiStock = data.ticker.endsWith('.BK');
-  const currencySymbol = isThaiStock ? '฿' : '$';
+  const isJapanStock = data.ticker.endsWith('.T');
+  const isKoreaStock = data.ticker.endsWith('.KS');
+  const isChinaStock = data.ticker.endsWith('.SS') || data.ticker.endsWith('.SZ');
+  
+  const currencySymbol = isThaiStock ? '฿' : isJapanStock ? '¥' : isKoreaStock ? '₩' : isChinaStock ? 'CN¥' : '$';
+
+  const formatNumber = (num: number) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <main className="min-h-screen bg-[#050505] text-white p-6 md:p-12 lg:p-24 selection:bg-blue-500/30 relative">
@@ -108,10 +114,10 @@ export default function StockDetail() {
             </div>
             
             <div className="text-left md:text-right">
-              <p className="text-6xl font-extrabold tracking-tighter">{currencySymbol}{data.price?.toFixed(2)}</p>
+              <p className="text-6xl font-extrabold tracking-tighter">{currencySymbol}{data.price != null ? formatNumber(data.price) : 'N/A'}</p>
               <div className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-lg font-bold text-lg ${data.change >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
                 {data.change >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                {data.change > 0 ? '+' : ''}{data.change?.toFixed(2)}%
+                {data.change > 0 ? '+' : ''}{data.change != null ? formatNumber(data.change) : '0'}%
               </div>
               {lastUpdated && (
                 <div className="text-xs text-gray-500 mt-3 font-medium">
@@ -138,18 +144,18 @@ export default function StockDetail() {
             <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
               <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">มูลค่าตลาด (Market Cap)</p>
               <p className="text-2xl font-bold tracking-tight">
-                {data.marketCap >= 1e12 ? `${currencySymbol}${(data.marketCap / 1e12).toFixed(2)}T` : 
-                 data.marketCap >= 1e9 ? `${currencySymbol}${(data.marketCap / 1e9).toFixed(2)}B` : 
-                 `${currencySymbol}${(data.marketCap / 1e6).toFixed(2)}M`}
+                {data.marketCap >= 1e12 ? `${currencySymbol}${formatNumber(data.marketCap / 1e12)}T` : 
+                 data.marketCap >= 1e9 ? `${currencySymbol}${formatNumber(data.marketCap / 1e9)}B` : 
+                 `${currencySymbol}${formatNumber(data.marketCap / 1e6)}M`}
               </p>
             </div>
             <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
               <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">อัตราส่วน P/E (TTM)</p>
-              <p className="text-2xl font-bold tracking-tight">{data.peRatio ? data.peRatio.toFixed(2) : 'N/A'}</p>
+              <p className="text-2xl font-bold tracking-tight">{data.peRatio ? formatNumber(data.peRatio) : 'N/A'}</p>
             </div>
             <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
               <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">เงินปันผล/หน่วย</p>
-              <p className="text-2xl font-bold tracking-tight text-emerald-400">{data.dividendRate ? `${currencySymbol}${data.dividendRate.toFixed(2)}` : '-'}</p>
+              <p className="text-2xl font-bold tracking-tight text-emerald-400">{data.dividendRate ? `${currencySymbol}${formatNumber(data.dividendRate)}` : '-'}</p>
             </div>
             <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
               <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">วันที่จ่ายปันผลล่าสุด</p>

@@ -15,11 +15,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const period1 = new Date();
     period1.setMonth(period1.getMonth() - 6);
     
-    const [quote, historyResult, financials, searchResult] = await Promise.all([
+    const [quote, historyResult, financials, searchResult, timeSeries] = await Promise.all([
       yahooFinance.quote(ticker),
       yahooFinance.chart(ticker, { period1, period2, interval: '1d' }).catch(() => ({ quotes: [] })),
-      yahooFinance.quoteSummary(ticker, { modules: ['incomeStatementHistory', 'balanceSheetHistory', 'assetProfile'] }).catch(() => null),
-      yahooFinance.search(ticker, { newsCount: 15 }).catch(() => ({ news: [] }))
+      yahooFinance.quoteSummary(ticker, { modules: ['incomeStatementHistory', 'balanceSheetHistory', 'assetProfile', 'financialData'] }).catch(() => null),
+      yahooFinance.search(ticker, { newsCount: 15 }).catch(() => ({ news: [] })),
+      yahooFinance.fundamentalsTimeSeries(ticker, {
+        period1: '2023-01-01',
+        period2: new Date().toISOString().split('T')[0],
+        module: 'all'
+      }).catch(() => [])
     ]);
 
     const chartData = (historyResult?.quotes || []).map(h => ({
@@ -99,12 +104,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       if (incomeStmts && incomeStmts.length > 0) {
         revenue = (incomeStmts[0] as any).totalRevenue || null;
         netIncome = (incomeStmts[0] as any).netIncome || null;
+      } else if (financials.financialData) {
+        revenue = financials.financialData.totalRevenue || null;
+        netIncome = (financials.financialData.operatingMargins * financials.financialData.totalRevenue) || null; // rough fallback
       }
       
       const balanceStmts = financials.balanceSheetHistory?.balanceSheetStatements;
-      if (balanceStmts && balanceStmts.length > 0) {
+      if (balanceStmts && balanceStmts.length > 0 && (balanceStmts[0] as any).totalAssets) {
         totalAssets = (balanceStmts[0] as any).totalAssets || null;
         totalLiabilities = (balanceStmts[0] as any).totalLiab || null;
+      } else if (timeSeries && timeSeries.length > 0) {
+        // Fallback to fundamentalsTimeSeries (latest record)
+        const latestTs = timeSeries[timeSeries.length - 1];
+        totalAssets = latestTs.totalAssets || null;
+        totalLiabilities = latestTs.totalLiabilitiesNetMinorityInterest || null;
+        if (!revenue) revenue = latestTs.totalRevenue || null;
+        if (!netIncome) netIncome = latestTs.netIncome || null;
       }
     }
 
