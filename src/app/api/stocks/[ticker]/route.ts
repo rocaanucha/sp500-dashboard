@@ -106,7 +106,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         netIncome = (incomeStmts[0] as any).netIncome || null;
       } else if (financials.financialData) {
         revenue = financials.financialData.totalRevenue || null;
-        netIncome = (financials.financialData.operatingMargins * financials.financialData.totalRevenue) || null; // rough fallback
+        const opMargin = financials.financialData.operatingMargins;
+        const tRev = financials.financialData.totalRevenue;
+        netIncome = (opMargin && tRev) ? (opMargin * tRev) : null; // rough fallback
       }
       
       const balanceStmts = financials.balanceSheetHistory?.balanceSheetStatements;
@@ -115,7 +117,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         totalLiabilities = (balanceStmts[0] as any).totalLiab || null;
       } else if (timeSeries && timeSeries.length > 0) {
         // Fallback to fundamentalsTimeSeries (latest record)
-        const latestTs = timeSeries[timeSeries.length - 1];
+        const latestTs = timeSeries[timeSeries.length - 1] as any;
         totalAssets = latestTs.totalAssets || null;
         totalLiabilities = latestTs.totalLiabilitiesNetMinorityInterest || null;
         if (!revenue) revenue = latestTs.totalRevenue || null;
