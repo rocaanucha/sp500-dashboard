@@ -71,6 +71,7 @@ export async function GET(request: NextRequest) {
     const market = searchParams.get('market');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
+    const searchQuery = (searchParams.get('search') || '').toLowerCase();
     
     const isSP500 = market === 'sp500';
     const isNikkei = market === 'nikkei225';
@@ -132,10 +133,30 @@ export async function GET(request: NextRequest) {
       sortedQuotes = cachedSET50Quotes;
     }
 
+    if (searchQuery) {
+      sortedQuotes = sortedQuotes.filter(q => 
+        (q.symbol && q.symbol.toLowerCase().includes(searchQuery)) || 
+        (q.shortName && q.shortName.toLowerCase().includes(searchQuery)) ||
+        (q.longName && q.longName.toLowerCase().includes(searchQuery))
+      );
+    }
+
     const totalPages = Math.ceil(sortedQuotes.length / limit);
     const startIdx = (page - 1) * limit;
     const paginatedQuotes = sortedQuotes.slice(startIdx, startIdx + limit);
     
+    // Fetch missing dividend dates for the paginated quotes
+    await Promise.all(paginatedQuotes.map(async (q) => {
+      if (q.dividendDate === undefined) {
+        try {
+          const summary = await yahooFinance.quoteSummary(q.symbol, { modules: ['summaryDetail'] });
+          q.dividendDate = summary?.summaryDetail?.exDividendDate || null;
+        } catch (e) {
+          q.dividendDate = null;
+        }
+      }
+    }));
+
     // Fetch FX rates (cache for 10 mins)
     if (now - cachedExchangeRatesTime > CACHE_TTL * 10 || Object.keys(cachedExchangeRates).length === 0) {
       const fxQuotes = await yahooFinance.quote(['THB=X', 'JPY=X', 'KRW=X', 'CNY=X']).catch(() => []);
@@ -153,7 +174,7 @@ export async function GET(request: NextRequest) {
       name: q.shortName || q.longName || q.symbol,
       price: q.regularMarketPrice || 0,
       change: q.regularMarketChangePercent || 0,
-      peRatio: q.trailingPE || null,
+      peRatio: q.trailingPE || q.forwardPE || q.priceEpsCurrentYear || null,
       marketCap: q.marketCap || 0,
       dividendRate: q.dividendRate || null,
       dividendDate: q.dividendDate ? new Date(q.dividendDate).toISOString().split('T')[0] : null,

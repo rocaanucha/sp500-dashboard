@@ -157,11 +157,11 @@ export default function StockTable() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [market]);
+  }, [market, search]);
 
   useEffect(() => {
     const fetchData = () => {
-      fetch(`/api/stocks?market=${market}&page=${currentPage}&limit=25`)
+      fetch(`/api/stocks?market=${market}&page=${currentPage}&limit=25&search=${encodeURIComponent(search)}`)
         .then(res => res.json())
         .then(data => {
           if (data.stocks) {
@@ -186,19 +186,18 @@ export default function StockTable() {
     };
 
     setLoading(true);
-    fetchData();
+    const delayDebounceFn = setTimeout(() => {
+      fetchData();
+    }, 300);
 
     const intervalId = setInterval(fetchData, 30000);
-    return () => clearInterval(intervalId);
-  }, [market, currentPage]);
+    return () => {
+      clearTimeout(delayDebounceFn);
+      clearInterval(intervalId);
+    };
+  }, [market, currentPage, search]);
 
-  const filteredStocks = stocks.filter(s => 
-
-    s.ticker.toLowerCase().includes(search.toLowerCase()) || 
-    s.name.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const sortedStocks = [...filteredStocks].sort((a, b) => {
+  const sortedStocks = [...stocks].sort((a, b) => {
     if (sortOrder === 'desc') return b.marketCap - a.marketCap;
     return a.marketCap - b.marketCap;
   });
@@ -223,8 +222,9 @@ export default function StockTable() {
 
   return (
     <div className="w-full">
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-        <div className="flex bg-gray-900/50 p-1 rounded-xl border border-gray-800 shadow-inner overflow-x-auto w-full md:w-auto shrink-0">
+      <div className="flex flex-col gap-4 mb-6">
+        {/* Row 1: Market Selectors */}
+        <div className="flex bg-gray-900/50 p-1 rounded-xl border border-gray-800 shadow-inner overflow-x-auto w-full">
           <button
             onClick={() => setMarket('sp500')}
             className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${market === 'sp500' ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -257,8 +257,10 @@ export default function StockTable() {
           </button>
         </div>
         
-        {marketInfo && (
-          <div className="flex flex-col items-center md:items-end w-full md:w-auto mt-4 md:mt-0 gap-2 shrink-0">
+        {/* Row 2: Status & Search */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 w-full mt-2">
+          {marketInfo && (
+            <div className="flex flex-col items-start w-full md:w-auto gap-2 shrink-0">
             <div className={`relative overflow-hidden group flex flex-col md:flex-row items-center gap-3 px-5 py-3 rounded-2xl border backdrop-blur-md shadow-lg transition-all duration-300 w-full md:w-auto ${marketInfo.isOpen ? 'bg-gradient-to-r from-emerald-900/40 to-emerald-800/20 border-emerald-500/30 shadow-emerald-900/20' : 'bg-gradient-to-r from-gray-800/60 to-gray-900/40 border-gray-700/50 shadow-gray-900/50'}`}>
                
                {/* Animated Background Glow */}
@@ -291,9 +293,9 @@ export default function StockTable() {
               </span>
             )}
           </div>
-        )}
+          )}
 
-        <div className="relative w-full max-w-md mt-4 md:mt-0">
+          <div className="relative w-full md:max-w-sm ml-auto">
           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search className="w-5 h-5 text-gray-400" />
           </div>
@@ -304,6 +306,7 @@ export default function StockTable() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </div>
         </div>
       </div>
 
