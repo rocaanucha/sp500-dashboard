@@ -63,7 +63,10 @@ export default function PriceChart({ data, ticker, currencySymbol = '$' }: { dat
             itemStyle={{ color: '#fff', fontWeight: 'bold' }}
             labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
             labelFormatter={(label) => new Date(label).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, 'Close Price']}
+            formatter={(value: any) => {
+              const numValue = typeof value === 'number' ? value : Number(value) || 0;
+              return [`$${numValue.toFixed(2)}`, 'Close Price'];
+            }}
           />
           <Area 
             type="monotone" 

@@ -97,14 +97,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (financials) {
       const incomeStmts = financials.incomeStatementHistory?.incomeStatementHistory;
       if (incomeStmts && incomeStmts.length > 0) {
-        revenue = incomeStmts[0].totalRevenue;
-        netIncome = incomeStmts[0].netIncome;
+        revenue = (incomeStmts[0] as any).totalRevenue || null;
+        netIncome = (incomeStmts[0] as any).netIncome || null;
       }
       
       const balanceStmts = financials.balanceSheetHistory?.balanceSheetStatements;
       if (balanceStmts && balanceStmts.length > 0) {
-        totalAssets = balanceStmts[0].totalAssets;
-        totalLiabilities = balanceStmts[0].totalLiab;
+        totalAssets = (balanceStmts[0] as any).totalAssets || null;
+        totalLiabilities = (balanceStmts[0] as any).totalLiab || null;
       }
     }
 
