@@ -318,6 +318,7 @@ export default function StockTable() {
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Price</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Change</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Div/Share</th>
+              <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Div Yield</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Div Date</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">P/E Ratio</th>
               <th scope="col" className="px-6 py-5 font-medium text-right cursor-pointer hover:text-white flex items-center justify-end group tracking-wider transition-colors" onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}>
@@ -381,6 +382,9 @@ export default function StockTable() {
                   </td>
                   <td className="px-6 py-5 text-right font-medium text-gray-300">
                     {stock.dividendRate ? `${currencySymbol}${formatNumber(stock.dividendRate)}` : <span className="text-gray-600">-</span>}
+                  </td>
+                  <td className="px-6 py-5 text-right font-medium text-emerald-400">
+                    {(stock.dividendRate && stock.price) ? `${formatNumber((stock.dividendRate / stock.price) * 100)}%` : <span className="text-gray-600">-</span>}
                   </td>
                   <td className="px-6 py-5 text-right font-medium text-gray-400 text-sm">
                     {stock.dividendDate ? new Date(stock.dividendDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : <span className="text-gray-600">-</span>}

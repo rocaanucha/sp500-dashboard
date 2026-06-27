@@ -158,6 +158,10 @@ export default function StockDetail() {
               <p className="text-2xl font-bold tracking-tight text-emerald-400">{data.dividendRate ? `${currencySymbol}${formatNumber(data.dividendRate)}` : '-'}</p>
             </div>
             <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
+              <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">อัตราผลตอบแทน (Div Yield)</p>
+              <p className="text-2xl font-bold tracking-tight text-emerald-400">{(data.dividendRate && data.price) ? `${formatNumber((data.dividendRate / data.price) * 100)}%` : '-'}</p>
+            </div>
+            <div className="bg-gray-900/30 p-6 rounded-3xl border border-gray-800/80 backdrop-blur-sm flex-1 flex flex-col justify-center">
               <p className="text-gray-500 text-sm font-medium tracking-wide mb-1 uppercase">วันที่จ่ายปันผลล่าสุด</p>
               <p className="text-2xl font-bold tracking-tight text-blue-400">
                 {data.dividendDate ? new Date(data.dividendDate).toLocaleDateString('th-TH', { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
