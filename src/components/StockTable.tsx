@@ -8,6 +8,7 @@ interface Stock {
   ticker: string;
   name: string;
   price: number;
+  previousClose: number;
   change: number;
   peRatio: number | null;
   marketCap: number;
@@ -316,6 +317,7 @@ export default function StockTable() {
             <tr>
               <th scope="col" className="px-6 py-5 font-medium tracking-wider">Ticker / Name</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Price</th>
+              <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Prev Price</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Change</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Div/Share</th>
               <th scope="col" className="px-6 py-5 font-medium text-right tracking-wider">Div Yield</th>
@@ -330,14 +332,14 @@ export default function StockTable() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-16 text-center text-gray-500">
+                <td colSpan={9} className="px-6 py-16 text-center text-gray-500">
                   <div className="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-blue-500/30 border-r-blue-500 align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
                   <p className="mt-4 text-sm font-medium tracking-wide">Fetching live market data...</p>
                 </td>
               </tr>
             ) : sortedStocks.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-16 text-center text-gray-500 font-medium">
+                <td colSpan={9} className="px-6 py-16 text-center text-gray-500 font-medium">
                   No stocks found matching your search.
                 </td>
               </tr>
@@ -371,6 +373,14 @@ export default function StockTable() {
                     {getUsdPrice(stock.price) > 0 && (
                       <div className="text-xs text-gray-400 font-medium mt-0.5">
                         (${formatNumber(getUsdPrice(stock.price))})
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-5 text-right font-medium text-gray-400 text-base">
+                    <div>{currencySymbol}{formatNumber(stock.previousClose)}</div>
+                    {getUsdPrice(stock.previousClose) > 0 && (
+                      <div className="text-xs text-gray-500 font-medium mt-0.5">
+                        (${formatNumber(getUsdPrice(stock.previousClose))})
                       </div>
                     )}
                   </td>

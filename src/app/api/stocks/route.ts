@@ -24,11 +24,17 @@ function getMarketInfo(market: string, marketState: string) {
   const isKR = market === 'kospi200';
   const isCN = market === 'csi300';
   const tz = isUS ? 'America/New_York' : isJP ? 'Asia/Tokyo' : isKR ? 'Asia/Seoul' : isCN ? 'Asia/Shanghai' : 'Asia/Bangkok';
-  const openTimeStr = isUS ? '09:30' : isJP ? '09:00' : isKR ? '09:00' : isCN ? '09:30' : '10:00';
-  const closeTimeStr = isUS ? '16:00' : isJP ? '15:00' : isKR ? '15:30' : isCN ? '15:00' : '16:30';
-  const tzName = isUS ? 'เวลาอเมริกา' : isJP ? 'เวลาญี่ปุ่น' : isKR ? 'เวลาเกาหลี' : isCN ? 'เวลาจีน' : 'เวลาไทย';
-  
   const now = new Date();
+  
+  // คำนวณเวลาเปิด-ปิดเป็นเวลาไทย (พิจารณาช่วงเวลาออมแสงของสหรัฐฯ คร่าวๆ)
+  const isUSDST = now.getMonth() >= 2 && now.getMonth() <= 10;
+  const usOpen = isUSDST ? '20:30' : '21:30';
+  const usClose = isUSDST ? '03:00' : '04:00';
+
+  const openTimeStr = isUS ? usOpen : isJP ? '07:00' : isKR ? '07:00' : isCN ? '08:30' : '10:00';
+  const closeTimeStr = isUS ? usClose : isJP ? '13:00' : isKR ? '13:30' : isCN ? '14:00' : '16:30';
+  const tzName = 'เวลาไทย';
+  
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: tz, hour: 'numeric', minute: 'numeric', weekday: 'short', hour12: false
   });
@@ -173,6 +179,7 @@ export async function GET(request: NextRequest) {
       ticker: q.symbol,
       name: q.shortName || q.longName || q.symbol,
       price: q.regularMarketPrice || 0,
+      previousClose: q.regularMarketPreviousClose || 0,
       change: q.regularMarketChangePercent || 0,
       peRatio: q.trailingPE || q.forwardPE || q.priceEpsCurrentYear || null,
       marketCap: q.marketCap || 0,
